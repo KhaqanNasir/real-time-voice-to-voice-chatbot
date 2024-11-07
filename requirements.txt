@@ -2,3 +2,5 @@ openai-whisper
 gtts 
 gradio 
 groq
+transformers
+torch
