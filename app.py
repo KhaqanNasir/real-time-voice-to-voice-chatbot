@@ -3,28 +3,23 @@ import gradio as gr
 import whisper
 from gtts import gTTS
 import io
-from groq import Groq
-
-# Set up the Groq API key
-os.environ["GROQ_API_KEY"] = "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"
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+from transformers import pipeline
 
 # Load Whisper model for transcription
-model = whisper.load_model("base")
+model = whisper.load_model("small")
+
+# Set up a Hugging Face Transformers pipeline for text generation as a substitute for Groq
+text_generation = pipeline("text-generation", model="gpt2")  # Lightweight alternative
 
 def process_audio(file_path):
     try:
+        # Load and transcribe audio
         audio = whisper.load_audio(file_path)
         result = model.transcribe(audio)
         text = result["text"]
 
-        # Get LLM response from Groq API
-        chat_completion = client.chat.completions.create(
-            messages=[{"role": "user", "content": text}],
-            model="llama3-8b-8192",
-        )
-
-        response_message = chat_completion.choices[0].message.content.strip()
+        # Generate LLM response using Hugging Face pipeline
+        response_message = text_generation(text, max_length=100, do_sample=True)[0]["generated_text"]
 
         # Convert text response to speech using gTTS
         tts = gTTS(response_message)
@@ -42,7 +37,7 @@ def process_audio(file_path):
         return f"An error occurred: {e}", None
 
 # Define the title, description, and instructions
-title = " Real TimeVoice-to-Voice Chatbot"
+title = " Real Time Voice-to-Voice Chatbot"
 description = "Developed by [Muhammad Khaqan Nasir](https://www.linkedin.com/in/khaqan-nasir/)"
 article = "### Instructions\n1. Upload an audio file.\n2. Wait for the transcription.\n3. Listen to the chatbot's response."
 
@@ -51,9 +46,9 @@ iface = gr.Interface(
     fn=process_audio,
     inputs=gr.Audio(type="filepath"),  # Use type="filepath"
     outputs=[gr.Textbox(label="Response Text"), gr.Audio(label="Response Audio")],
-    live=True,
+    live=False,  # Set to False for reduced resource usage
     title=title,
-    theme="huggingface",
+    theme="light",
     description=description,
     article=article
 )
